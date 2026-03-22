@@ -354,6 +354,7 @@ document.addEventListener("keydown",e=>{
 });
 
 function revealPuzzle(){
+  if(!confirm("Reveal the answer? This will reset your streak."))return;
   if(state.solved)return;
   for(const c of Object.keys(state.mapping)){
     if(state.cipher.includes(c)){state.guesses[c]=state.mapping[c];}
