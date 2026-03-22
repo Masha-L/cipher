@@ -266,9 +266,7 @@ function renderKeyboard(){
       else if(usedValues.has(letter))key.classList.add("used");
       key.addEventListener("click",()=>handleKeyPress(letter));rowDiv.appendChild(key);
     });
-    if(ri===2){const enter=document.createElement("button");enter.className="key key-action";
-      enter.textContent="OK";enter.addEventListener("click",checkWin);rowDiv.appendChild(enter);
-      const del=document.createElement("button");del.className="key key-action";
+    if(ri===2){const del=document.createElement("button");del.className="key key-action";
       del.textContent="DEL";del.addEventListener("click",handleDelete);rowDiv.appendChild(del);}
     kb.appendChild(rowDiv);
   });
