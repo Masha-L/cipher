@@ -21,7 +21,7 @@ h1 span{color:var(--dim);font-size:.7em;letter-spacing:.1em}
 .stats-bar{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;
   font-size:.75rem;color:var(--dim);margin-top:8px}
 .stats-bar .val{color:var(--accent2);font-weight:bold}
-#puzzle{width:100%;max-width:720px;margin-bottom:20px;line-height:2.4;
+#puzzle{width:100%;max-width:720px;margin-bottom:20px;line-height:3.2;
   font-size:1.15rem;letter-spacing:.05em;padding:0 4px}
 .word{display:inline-block;margin:0 6px 4px 0;white-space:nowrap}
 .cell{display:inline-flex;flex-direction:column;align-items:center;
@@ -34,7 +34,7 @@ h1 span{color:var(--dim);font-size:.7em;letter-spacing:.1em}
 .cell.correct .guess{color:var(--accent2);border-color:var(--accent2)}
 .cell.locked .guess{color:var(--accent2);opacity:.85}
 .cell.hint .guess{color:var(--accent);border-color:var(--accent)}
-.punct{display:inline;color:var(--dim);font-size:1em;vertical-align:bottom;line-height:2.4}
+.punct{display:inline;color:var(--dim);font-size:1em;vertical-align:bottom;line-height:3.2}
 #keyboard{width:100%;max-width:480px;margin-bottom:16px}
 .kb-row{display:flex;justify-content:center;gap:4px;margin-bottom:4px}
 .key{flex:1;max-width:38px;height:42px;border:1px solid var(--border);
@@ -52,6 +52,11 @@ h1 span{color:var(--dim);font-size:.7em;letter-spacing:.1em}
   font-size:.8rem;cursor:pointer;transition:all .15s;letter-spacing:.05em}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
 .btn.primary{border-color:var(--accent);color:var(--accent)}
+.btn.danger{border-color:var(--err);color:var(--err)}
+.btn.active{background:var(--accent);color:var(--bg)}
+.toggle-row{display:flex;gap:10px;justify-content:center;margin-bottom:8px;font-size:.75rem;color:var(--dim)}
+.toggle-label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.toggle-label input{accent-color:var(--accent)}
 #timer{font-size:.85rem;color:var(--dim);margin-bottom:12px;text-align:center}
 #win-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);
   z-index:100;align-items:center;justify-content:center}
@@ -88,9 +93,11 @@ h1 span{color:var(--dim);font-size:.7em;letter-spacing:.1em}
 <div id="freq-bar"><div class="freq-row" id="freq-row"></div></div>
 <div id="puzzle"></div>
 <div id="keyboard"></div>
+<div class="toggle-row"><label class="toggle-label"><input type="checkbox" id="chk-validate" checked> Show correct/incorrect</label></div>
 <div class="controls">
   <button class="btn" id="btn-hint">HINT <span class="hint-count" id="hint-count">(3)</span></button>
   <button class="btn" id="btn-clear">CLEAR</button>
+  <button class="btn danger" id="btn-reveal">REVEAL</button>
   <button class="btn primary" id="btn-new">NEW PUZZLE</button>
 </div>
 <div id="win-overlay">
@@ -225,7 +232,8 @@ function renderPuzzle(){
         const guessLabel=document.createElement("span");guessLabel.className="guess";
         if(state.hints.has(ch.cipher)){guessLabel.textContent=state.mapping[ch.cipher];cell.classList.add("hint","locked");}
         else if(state.guesses[ch.cipher]){guessLabel.textContent=state.guesses[ch.cipher];
-          if(state.guesses[ch.cipher]===state.mapping[ch.cipher])cell.classList.add("correct");}
+          const validate=document.getElementById("chk-validate")&&document.getElementById("chk-validate").checked;
+          if(validate&&state.guesses[ch.cipher]===state.mapping[ch.cipher])cell.classList.add("correct");}
         cell.appendChild(cipherLabel);cell.appendChild(guessLabel);
         cell.addEventListener("click",()=>selectCell(ch.cipher));wd.appendChild(cell);
       });
@@ -246,13 +254,18 @@ function renderKeyboard(){
   const kb=document.getElementById("keyboard");kb.innerHTML="";
   const rows=["QWERTYUIOP","ASDFGHJKL","ZXCVBNM"];
   const usedValues=new Set(Object.values(state.guesses));
+  const validate=document.getElementById("chk-validate")&&document.getElementById("chk-validate").checked;
+  const correctValues=new Set();
+  if(validate){for(const[c,g]of Object.entries(state.guesses)){if(g===state.mapping[c])correctValues.add(g);}}
   rows.forEach((row,ri)=>{
     const rowDiv=document.createElement("div");rowDiv.className="kb-row";
     if(ri===2){const del=document.createElement("button");del.className="key key-action";
       del.textContent="DEL";del.addEventListener("click",handleDelete);rowDiv.appendChild(del);}
     row.split("").forEach(letter=>{
       const key=document.createElement("button");key.className="key";key.textContent=letter;
-      key.dataset.letter=letter;if(usedValues.has(letter))key.classList.add("mapped");
+      key.dataset.letter=letter;
+      if(validate&&correctValues.has(letter))key.classList.add("mapped");
+      else if(usedValues.has(letter))key.classList.add("used");
       key.addEventListener("click",()=>handleKeyPress(letter));rowDiv.appendChild(key);
     });
     if(ri===2){const enter=document.createElement("button");enter.className="key key-action";
@@ -340,10 +353,27 @@ document.addEventListener("keydown",e=>{
   else if(e.key==="Tab"){e.preventDefault();if(state.selectedCell)autoAdvance(state.selectedCell);}
 });
 
+function revealPuzzle(){
+  if(state.solved)return;
+  for(const c of Object.keys(state.mapping)){
+    if(state.cipher.includes(c)){state.guesses[c]=state.mapping[c];}
+  }
+  state.solved=true;const elapsed=stopTimer();
+  stats.streak=0;saveStats();renderStats();
+  renderPuzzle();renderKeyboard();renderFreq();
+  document.querySelectorAll(".cell").forEach(c=>c.classList.add("correct"));
+  const q=QUOTES[state.quoteIdx];
+  document.getElementById("win-quote").textContent='"'+q.text+'" \u2014 '+q.attr;
+  document.getElementById("win-meta").innerHTML='Revealed<br>Time: '+fmtTime(elapsed)+'<br>Streak reset';
+  setTimeout(()=>document.getElementById("win-overlay").classList.add("show"),400);
+}
+
 document.getElementById("btn-hint").addEventListener("click",giveHint);
 document.getElementById("btn-clear").addEventListener("click",clearGuesses);
+document.getElementById("btn-reveal").addEventListener("click",revealPuzzle);
 document.getElementById("btn-new").addEventListener("click",newGame);
 document.getElementById("btn-next").addEventListener("click",newGame);
+document.getElementById("chk-validate").addEventListener("change",function(){renderPuzzle();renderKeyboard();renderFreq();});
 renderStats();newGame();
 </script>
 </body>
