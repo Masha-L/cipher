@@ -259,8 +259,6 @@ function renderKeyboard(){
   if(validate){for(const[c,g]of Object.entries(state.guesses)){if(g===state.mapping[c])correctValues.add(g);}}
   rows.forEach((row,ri)=>{
     const rowDiv=document.createElement("div");rowDiv.className="kb-row";
-    if(ri===2){const del=document.createElement("button");del.className="key key-action";
-      del.textContent="DEL";del.addEventListener("click",handleDelete);rowDiv.appendChild(del);}
     row.split("").forEach(letter=>{
       const key=document.createElement("button");key.className="key";key.textContent=letter;
       key.dataset.letter=letter;
@@ -269,7 +267,9 @@ function renderKeyboard(){
       key.addEventListener("click",()=>handleKeyPress(letter));rowDiv.appendChild(key);
     });
     if(ri===2){const enter=document.createElement("button");enter.className="key key-action";
-      enter.textContent="OK";enter.addEventListener("click",checkWin);rowDiv.appendChild(enter);}
+      enter.textContent="OK";enter.addEventListener("click",checkWin);rowDiv.appendChild(enter);
+      const del=document.createElement("button");del.className="key key-action";
+      del.textContent="DEL";del.addEventListener("click",handleDelete);rowDiv.appendChild(del);}
     kb.appendChild(rowDiv);
   });
 }
